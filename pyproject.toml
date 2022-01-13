@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ideal-stock-portfolio"
+version = "0.1.0"
+description = ""
+authors = ["syed-hussain-93 <syed.musharot.hussain@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pandas = "^1.3.5"
+pandas-datareader = "^0.10.0"
+matplotlib = "^3.5.1"
+pyportfolioopt = "^1.5.1"
+cvxpy = "^1.1.18"
+cvxopt = "^1.2.7"
+
+[tool.poetry.dev-dependencies]
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
