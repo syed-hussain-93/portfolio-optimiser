@@ -1,5 +1,3 @@
-from pickletools import optimize
-from sys import float_repr_style
 from typing import List, Optional, Tuple
 from assets_class import Asset
 import numpy as np
@@ -8,7 +6,7 @@ from scipy.optimize import minimize
 
 
 TRADING_DAYS_PER_YEAR = 250
-RISK_FREE_RATE = 1.3  # UK 2021
+RISK_FREE_RATE = 0.11  # 1.3  # UK 2021
 
 
 class Portfolio:
@@ -27,9 +25,6 @@ class Portfolio:
         self.size = len(self.assets)
 
         self.weights = []
-
-    def add_asset(self, asset: Asset) -> None:
-        self.assets.append(asset)
 
     def set_random_weights(self):
 
@@ -89,8 +84,10 @@ class Portfolio:
     def optimise_sharpe_ratio(self):
 
         result = minimize(
-            lambda w: -(self._portfolio_return(w) - RISK_FREE_RATE / 100)
-            / self._portfolio_std(w),
+            lambda w: -np.divide(
+                (self._portfolio_return(w) - RISK_FREE_RATE / 100),
+                self._portfolio_std(w),
+            ),
             self.set_random_weights(),
             constraints=[{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}],
             bounds=[(0.0, 1.0) for i in range(self.size)],
@@ -112,3 +109,13 @@ class Portfolio:
             bounds=[(0.0, 1.0) for i in range(self.size)],
         )
         self.weights = result.x
+
+    def run_optimisation(self, opt: str, usr_input: float = None) -> None:
+        if opt == "Risk Tolerance":
+            self.optimise_with_risk_tolerance(risk_tolerance=usr_input)
+        elif opt == "Expect Return":
+            self.optimise_with_expected_return(expected_return=usr_input)
+        elif opt == "Sharpe Ratio":
+            self.optimise_sharpe_ratio()
+        elif opt == "Risk Free":
+            self.optimise_with_risk_tolerance(risk_tolerance=0.0)
