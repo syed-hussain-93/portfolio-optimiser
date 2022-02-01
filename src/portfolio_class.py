@@ -1,5 +1,4 @@
 from typing import List, Optional, Tuple
-from unittest import result
 from assets_class import Asset
 import numpy as np
 import pandas as pd
@@ -18,7 +17,7 @@ class Portfolio:
         
         self.weights = []
     
-    @lru_cache    
+    @lru_cache(maxsize=32) 
     def assets_close_price_data(self, date:bool = None):
         portfolio_data = pd.concat(
             [asset.data["Close"] for asset in self.assets], axis=1
@@ -29,7 +28,7 @@ class Portfolio:
         portfolio_data = portfolio_data.dropna()
         return portfolio_data
     
-    @lru_cache
+    @lru_cache(maxsize=32)
     def assets_returns_data(self, date: bool=False):
         assets_returns = pd.concat(
             [asset.return_prices() for asset in self.assets], axis=1
@@ -40,7 +39,7 @@ class Portfolio:
         assets_returns = assets_returns.dropna()
         return assets_returns
     
-    @lru_cache
+    @lru_cache(maxsize=32)
     def assets_mean_annualised_returns(self):
         annualised_returns = [asset.mean_returns() for asset in self.assets]
         return annualised_returns
@@ -61,7 +60,7 @@ class Portfolio:
         
         return self._portfolio_return(weights)
 
-    @lru_cache
+    @lru_cache(maxsize=32)
     def covariance_matrix(self, period="annual", frequency=250):
         daily_cov_matrix = self.assets_returns_data().cov()
         return frequency * daily_cov_matrix
@@ -128,7 +127,7 @@ class Portfolio:
         )
         return result.x
     
-    @lru_cache
+    @lru_cache(maxsize=32)
     def efficient_frontier(self):
         
         # Drawing the efficient frontier
