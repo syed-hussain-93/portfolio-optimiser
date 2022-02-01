@@ -1,4 +1,3 @@
 # portfolio-optimiser
-Simple application of MPT in notebooks directory 
+Streamlit webapp of portfolio optimiser. 
 
-plans to extend into web application
