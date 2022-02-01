@@ -18,6 +18,8 @@ scipy = "^1.7.3"
 streamlit = "^1.4.0"
 Yahoo-ticker-downloader = "^3.0.1"
 SQLAlchemy = "^1.4.29"
+statsmodels = "^0.13.1"
+seaborn = "^0.11.2"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

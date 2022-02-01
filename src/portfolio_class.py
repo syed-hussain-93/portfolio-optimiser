@@ -1,59 +1,77 @@
 from typing import List, Optional, Tuple
+from unittest import result
 from assets_class import Asset
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
+from functools import lru_cache
 
-
-TRADING_DAYS_PER_YEAR = 250
-RISK_FREE_RATE = 0.11  # 1.3  # UK 2021
+RISK_FREE_RATE = 1.3  # UK 2021
 
 
 class Portfolio:
-    def __init__(self, assets: List = []) -> None:
+    def __init__(self, assets: List) -> None:
 
-        self.assets = assets
-
-        self.portfolio_data = pd.concat(
-            [asset.data["Close"] for asset in self.assets], axis=1
-        ).dropna()
-        self.portfolio_data.columns = [asset.name for asset in self.assets]
-
-        self.assets_daily_returns = pd.concat(
-            [asset.daily_returns for asset in self.assets], axis=1
-        ).dropna()
+        self.assets = assets        
         self.size = len(self.assets)
-
+        self.data_dates = assets[0].data['Date']
+        
         self.weights = []
-
+    
+    @lru_cache    
+    def assets_close_price_data(self, date:bool = None):
+        portfolio_data = pd.concat(
+            [asset.data["Close"] for asset in self.assets], axis=1
+        )
+        portfolio_data.columns = [asset.name for asset in self.assets]
+        if date:
+            portfolio_data.insert(loc=0, column='Date', value=self.data_dates)
+        portfolio_data = portfolio_data.dropna()
+        return portfolio_data
+    
+    @lru_cache
+    def assets_returns_data(self, date: bool=False):
+        assets_returns = pd.concat(
+            [asset.return_prices() for asset in self.assets], axis=1
+        )
+        assets_returns.columns = [asset.name for asset in self.assets]
+        if date:
+            assets_returns.insert(loc=0, column='Date', value=self.data_dates)
+        assets_returns = assets_returns.dropna()
+        return assets_returns
+    
+    @lru_cache
+    def assets_mean_annualised_returns(self):
+        annualised_returns = [asset.mean_returns() for asset in self.assets]
+        return annualised_returns
+    
     def set_random_weights(self):
 
         weights = np.random.random(self.size)
         weights /= np.sum(weights)
 
-        self.weights = weights
-        return self.weights
+        # self.weights = weights
+        return weights
 
-    def _portfolio_return(self, weights: List):
+    def _portfolio_return(self, weights):
         # Annual expected portoflio return
-        daily = np.dot(weights, self.assets_daily_returns.mean())
-        return TRADING_DAYS_PER_YEAR * daily
+        return np.dot(weights, self.assets_mean_annualised_returns())
 
-    @property
-    def portfolio_expected_return(self):
-        return self._portfolio_return(self.weights)
+    def portfolio_expected_return(self, weights):
+        
+        return self._portfolio_return(weights)
 
-    def covariance_matrix(self, period="annual"):
-        daily_cov_matrix = self.assets_daily_returns.cov()
-        return TRADING_DAYS_PER_YEAR * daily_cov_matrix
+    @lru_cache
+    def covariance_matrix(self, period="annual", frequency=250):
+        daily_cov_matrix = self.assets_returns_data().cov()
+        return frequency * daily_cov_matrix
 
     def _portfolio_std(self, weights: List):
         variance = np.dot(weights, np.dot(self.covariance_matrix(), weights))
         return np.sqrt(variance)
 
-    @property
-    def portfolio_std(self):
-        return self._portfolio_std(self.weights)
+    def portfolio_std(self,weights):
+        return self._portfolio_std(weights)
 
     def monte_carlo(self, iterations=1000):
 
@@ -78,8 +96,8 @@ class Portfolio:
             constraints=[{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}],
             bounds=[(0.0, 1.0) for i in range(self.size)],
         )
-
-        self.weights = result.x
+        weights = result.x
+        return weights
 
     def optimise_sharpe_ratio(self):
 
@@ -92,7 +110,7 @@ class Portfolio:
             constraints=[{"type": "eq", "fun": lambda w: np.sum(w) - 1.0}],
             bounds=[(0.0, 1.0) for i in range(self.size)],
         )
-        self.weights = result.x
+        return result.x
 
     def optimise_with_expected_return(self, expected_return: float):
 
@@ -108,14 +126,32 @@ class Portfolio:
             ],
             bounds=[(0.0, 1.0) for i in range(self.size)],
         )
-        self.weights = result.x
+        return result.x
+    
+    @lru_cache
+    def efficient_frontier(self):
+        
+        # Drawing the efficient frontier
+        volatility = []
+        returns = []
+        for rt in np.linspace(-500, 500, 2000):
+            weights = self.optimise_with_risk_tolerance(rt)
+            volatility.append(self.portfolio_std(weights))
+            returns.append(self.portfolio_expected_return(weights))
+        
+        results = {"std": volatility, "returns": returns}
+        return results
 
     def run_optimisation(self, opt: str, usr_input: float = None) -> None:
         if opt == "Risk Tolerance":
-            self.optimise_with_risk_tolerance(risk_tolerance=usr_input)
+            weights = self.optimise_with_risk_tolerance(risk_tolerance=usr_input)
         elif opt == "Expect Return":
-            self.optimise_with_expected_return(expected_return=usr_input)
+            weights = self.optimise_with_expected_return(expected_return=usr_input)
         elif opt == "Sharpe Ratio":
-            self.optimise_sharpe_ratio()
+            weights = self.optimise_sharpe_ratio()
         elif opt == "Risk Free":
-            self.optimise_with_risk_tolerance(risk_tolerance=0.0)
+            weights = self.optimise_with_risk_tolerance(risk_tolerance=0.0)
+
+        results = {"weights": weights, "returns": self.portfolio_expected_return(weights), "std": self.portfolio_std(weights)}
+        
+        return results
