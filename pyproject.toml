@@ -23,7 +23,7 @@ statsmodels = "^0.13.1"
 seaborn = "^0.11.2"
 
 [tool.poetry.dev-dependencies]
-jupyter = "^1.0.0"
+jupyter = "~1.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
